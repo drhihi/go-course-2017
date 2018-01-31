@@ -59,23 +59,26 @@ func createKey(wg *sync.WaitGroup, testKey []byte, index uint8, ch *string, q *b
 		return
 	}
 
-	for _, v := range availableChars {
+	keys := make([][]byte, len(availableChars))
+
+	for i, v := range availableChars {
 		testKey[index] = v
-		wg.Add(1)
 		copyTestKey := make([]byte, length)
 		copy(copyTestKey, testKey)
-		go checkKey(wg, copyTestKey, ch, q, hash)
+		keys[i] = copyTestKey
 		if index+1 < length {
 			wg.Add(1)
 			go createKey(wg, copyTestKey, index+1, ch, q, hash, availableChars, length)
 		}
 	}
+	wg.Add(1)
+	go checkKeys(wg, keys, ch, q, hash)
 
 	wg.Done()
 
 }
 
-func checkKey(wg *sync.WaitGroup, testKey []byte, ch *string, q *bool, hash *string) {
+func checkKeys(wg *sync.WaitGroup, keys [][]byte, ch *string, q *bool, hash *string) {
 
 	//defer wg.Done()
 
@@ -85,13 +88,19 @@ func checkKey(wg *sync.WaitGroup, testKey []byte, ch *string, q *bool, hash *str
 	}
 
 	hasherTest := sha256.New()
-	hasherTest.Write(testKey)
-	hashTest := hasherTest.Sum(nil)
-	hashHexTest := hex.EncodeToString(hashTest)
+	for _, testKey := range keys {
+		strTestKey := string(testKey)
+		_ = strTestKey
+		hasherTest.Write(testKey)
+		hashTest := hasherTest.Sum(nil)
+		hashHexTest := hex.EncodeToString(hashTest)
+		hasherTest.Reset()
+		if hashHexTest == *hash {
+			*ch = string(testKey)
+			*q = true
+			break
+		}
 
-	if hashHexTest == *hash {
-		*ch = string(testKey)
-		*q = true
 	}
 
 	wg.Done()
