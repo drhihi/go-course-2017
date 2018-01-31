@@ -103,6 +103,8 @@ func checkKeys(wg *sync.WaitGroup, keys [][]byte, ch *string, q *bool, hash *str
 
 	}
 
+    keys = nil
+
 	wg.Done()
 
 }
